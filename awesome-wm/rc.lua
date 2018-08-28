@@ -9,7 +9,7 @@ local beautiful = require("beautiful")
 -- Notification library
 local naughty = require("naughty")
 local menubar = require("menubar")
-require("vicious")
+local vicious = require("vicious")
 
 local hotkeys_popup = require("awful.hotkeys_popup").widget
 local revelation=require("revelation")
@@ -19,10 +19,13 @@ require("awful.hotkeys_popup.keys")
 
 
 -- Custom Widgets
+local spotify_widget = require("awesome-wm-widgets.spotify-widget.spotify")
 local battery_widget = require("awesome-wm-widgets.battery-widget.battery")
 local cpu_widget = require("awesome-wm-widgets.cpu-widget.cpu-widget")
+local ram_widget = require("awesome-wm-widgets.ram-widget.ram-widget")
 local volumearc_widget = require("awesome-wm-widgets.volumearc-widget.volumearc")
 local volume_widget = require("awesome-wm-widgets.volume-widget.volume")
+local volumebar_widget = require("awesome-wm-widgets.volumebar-widget.volumebar")
 local weather_widget = require("awesome-wm-widgets.weather-widget.weather")
 
 
@@ -251,7 +254,7 @@ awful.screen.connect_for_each_screen(function(s)
 --   set_wallpaper(s)
 
 -- Each screen has its own tag table.
-awful.tag({ " ⚔️ ", " ⚔️ ", " ⚔️ ", " ⚔️ ", " ⚔️ ", " ⚔️ ", " ⚔️ " }, s, awful.layout.layouts[2])
+awful.tag({ " ⚔️", " ⚔️", " ⚔️", " ⚔️", " ⚔️", " ⚔️", " ⚔️", " ⚔️", " ⚔️" }, s, awful.layout.layouts[2])
 beautiful.taglist_spacing = "0"
 -- Create a promptbox for each screen
 s.mypromptbox = awful.widget.prompt()
@@ -275,21 +278,8 @@ beautiful.systray_icon_spacing = 14
 -- Separator
 --------------------------------------------------------------------------------
 local separator = wibox.widget.textbox()
-separator.text = " "
+separator.text = "  "
 
--- Checkupdates 
---------------------------------------------------------------------------------
-local checkupd = awful.widget.watch('bash -c "checkupdates | wc -l "', 31)
-local updicon = wibox.widget.textbox()
---aur.markup = '<span color="#a0a0a0">  </span>'
-updicon.text =  ""
-
-local pacman = wibox.widget {
-	updicon,
-	checkupd,
-	layout = wibox.layout.fixed.horizontal,
-}
-pacman:buttons(awful.button({ }, 1, function () awful.spawn("termite -e 'trizen -Syu'") end))
 
 -- global title bar    ------ holgerschurig.de/en/awesome-4.0-global-titlebar/
 -----------------------------------------------------------------------------
@@ -365,6 +355,27 @@ function(widget, stdout)
 			{ widget = mpris,   },
 		}
 
+
+-- RAM usage widget
+memwidget = awful.widget.progressbar()
+memwidget:set_width(15)
+memwidget:set_height(30)
+memwidget:set_vertical(true)
+memwidget:set_background_color('#494B4F')
+memwidget:set_color('#AECF96')
+--memwidget:set_gradient_colors({ '#AECF96', '#88A175', '#FF5656' })
+
+-- RAM usage tooltip
+memwidget_t = awful.tooltip({ objects = { memwidget.widget },})
+
+vicious.cache(vicious.widgets.mem)
+vicious.register(memwidget, vicious.widgets.mem,
+                function (widget, args)
+                    memwidget_t:set_text(" RAM: " .. args[2] .. "MB / " .. args[3] .. "MB ")
+                    return args[1]
+                 end, 13)
+                 --update every 13 seconds
+		 --
 -- Create the wibox
 s.mywibox = awful.wibar({ position = "top", screen = s })
 
@@ -376,8 +387,8 @@ s.mywibox:setup {
 	separator,
 	mylauncher,
 	separator,
-	--	    separator,
 	s.mytaglist,
+	separator,
 	s.mypromptbox,
 	},
 	{ -- Middle widget
@@ -389,13 +400,16 @@ s.mywibox:setup {
 	{ -- Right widgets
 	layout = wibox.layout.fixed.horizontal,
 	--mpris,
-	spotify,
+	spotify_widget,
 	separator,
 	cpu_widget,
 	separator,
-
+	ram_widget,
+	separator,
 	--mykeyboardlayout,
 	volume_widget,
+	separator,
+	volumebar_widget,
 	separator,
         battery_widget,
 	separator,
@@ -440,7 +454,7 @@ end,
 {description = "focus next by index", group = "client"}
 ),
 
--- Custom mappings
+-- Custom mappings for function keys
 awful.key({ }, "#68", function () awful.util.spawn("amixer -D pulse sset Master 5%-") end),
 awful.key({ }, "#69", function () awful.util.spawn("amixer -D pulse sset Master 5%+") end),
 awful.key({ }, "#67", function () awful.util.spawn("amixer -D pulse sset Master 1+ toggle") end),
@@ -482,11 +496,17 @@ end,
 {description = "go back", group = "client"}),
 
 -- Standard program
-awful.key({ modkey,           }, ",", function () awful.spawn("playerctl previous")  end,
+
+-- Spotify key bindings
+awful.key({ modkey,           }, ",", function () awful.spawn("sp prev")  end,
 	  {description = "spotify prev", group = "launcher"}),
-awful.key({ modkey,           }, ".", function () awful.spawn("playerctl next")  end,
+awful.key({ modkey,           }, ".", function () awful.spawn("sp next")  end,
 	  {description = "spotify next", group = "launcher"}),
-    awful.key({ modkey,           }, "Return", function () awful.spawn(terminal) end,
+awful.key({ modkey,           }, "/", function () awful.spawn("sp play")  end,
+	  {description = "spotify next", group = "launcher"}),
+
+
+awful.key({ modkey,           }, "Return", function () awful.spawn(terminal) end,
               {description = "open a terminal", group = "launcher"}),
 awful.key({ modkey,  }, "f", function() awful.spawn("kitty ranger") end,
 	  {description = "ranger", group = "launcher"}),
@@ -505,15 +525,12 @@ awful.key({ modkey, "Shift"   }, "q", awesome.quit,
 
 awful.key({modkey, }, "p", function() end),
 
+-- Scaling different tiles
 awful.key({ modkey, "Shift"    }, "Right",     function () awful.tag.incmwfact( 0.01)    end),
 awful.key({ modkey, "Shift"    }, "Left",     function () awful.tag.incmwfact(-0.01)    end),
 awful.key({ modkey, "Shift"    }, "Down",     function () awful.client.incwfact( 0.01)    end),
 awful.key({ modkey, "Shift"    }, "Up",     function () awful.client.incwfact(-0.01)    end),
 
---awful.key({ modkey,           }, "l",     function () awful.tag.incmwfact( 0.05)          end,
---	  {description = "increase master width factor", group = "layout"}),
---awful.key({ modkey,           }, "h",     function () awful.tag.incmwfact(-0.05)          end,
---	  {description = "decrease master width factor", group = "layout"}),
 awful.key({ modkey, "Shift"   }, "h",     function () awful.tag.incnmaster( 1, nil, true) end,
 	  {description = "increase the number of master clients", group = "layout"}),
 awful.key({ modkey, "Shift"   }, "l",     function () awful.tag.incnmaster(-1, nil, true) end,
