@@ -8,11 +8,11 @@ local dpi = require("beautiful.xresources").apply_dpi
 
 -- {{{ Main
 local theme = {}
-theme.wallpaper = nil
+theme.wallpaper = "~/.config/awesome/themes/blueres/green.jpg"
 -- }}}
 
 -- {{{ Styles
-theme.font      = "Roboto Mono Medium 11"
+theme.font      = "Roboto Mono Medium 10"
 
 -- {{{ Colors
 theme.fg_normal  = "#a0a0a0"
